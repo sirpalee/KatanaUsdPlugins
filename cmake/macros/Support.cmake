@@ -19,6 +19,19 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
+# Modifications Copyright 2020 Autodesk, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 include(PxrUsdUtils)
 # Sets up interfaces for required thirdparty libraries, defines functions
@@ -81,6 +94,7 @@ function(pxr_library NAME)
     )
     foreach(cls ${args_PUBLIC_CLASSES})
         list(APPEND ${NAME}_CPPFILES ${cls}.cpp)
+        list(APPEND args_PUBLIC_HEADERS ${cls}.h)
     endforeach()
     foreach(cls ${args_PRIVATE_CLASSES})
         list(APPEND ${NAME}_CPPFILES ${cls}.cpp)
@@ -95,7 +109,7 @@ function(pxr_library NAME)
         add_library(${NAME} SHARED "${args_CPPFILES};${${NAME}_CPPFILES}")
         if(args_PUBLIC_HEADERS)
             set_target_properties(${NAME} PROPERTIES
-                PUBLIC_HEADER ${args_PUBLIC_HEADERS}
+                PUBLIC_HEADER "${args_PUBLIC_HEADERS}"
             )
         endif()
         if(BUILD_KATANA_INTERNAL_USD_PLUGINS)
@@ -103,7 +117,7 @@ function(pxr_library NAME)
             if(args_PUBLIC_HEADERS)
                 file(COPY ${args_PUBLIC_HEADERS}
                     DESTINATION
-                        ${PLUGINS_RES_BUNDLE_PATH}/Usd/include
+                        ${PLUGINS_RES_BUNDLE_PATH}/Usd/include/${NAME}
                     )
             endif()
         endif()
@@ -113,8 +127,9 @@ function(pxr_library NAME)
         
         if(NOT BUILD_KATANA_INTERNAL_USD_PLUGINS)
             install(TARGETS ${NAME}
-                LIBRARY DESTINATION ${pluginInstallPrefix}/libs
-                PUBLIC_HEADER DESTINATION ${pluginInstallPrefix}/include
+                DESTINATION lib
+                LIBRARY DESTINATION lib
+                PUBLIC_HEADER DESTINATION include/${NAME}
             )
         endif()
     elseif (args_TYPE STREQUAL "PLUGIN")
@@ -130,12 +145,17 @@ function(pxr_library NAME)
         message(FATAL_ERROR "Unsupported library type: " args_TYPE)
     endif()
 
-    set(pluginToLibraryPath "")
     if(BUILD_KATANA_INTERNAL_USD_PLUGINS)
         if(WIN32)
             set(pluginToLibraryPath "Fn${NAME}.dll")
         else()
             set(pluginToLibraryPath "Fn${NAME}.so")
+        endif()
+    else()
+        if(WIN32)
+            set(pluginToLibraryPath "${NAME}.dll")
+        else()
+            set(pluginToLibraryPath "lib${NAME}.so")
         endif()
     endif()
 
@@ -147,7 +167,7 @@ function(pxr_library NAME)
     endif()
     _install_resource_files(
         ${NAME}
-        "${pluginInstallPrefix}"
+        "lib"
         "${pluginToLibraryPath}"
         ${args_RESOURCE_FILES}
     )
@@ -199,7 +219,7 @@ function(pxr_library NAME)
     )
     target_link_libraries(
         ${NAME}
-        PRIVATE
+        PUBLIC
         ${args_LIBRARIES}
         $<$<CXX_COMPILER_ID:MSVC>:OPENGL32.lib>
     )
@@ -247,7 +267,7 @@ function(pxr_library NAME)
             ${args_LIBRARIES}
             ${NAME}
         )
-        install(TARGETS ${pythonWrapperModuleName} DESTINATION "${PXR_INSTALL_SUBDIR}/lib/python/${PXR_PY_PACKAGE_NAME}/${pyModuleName}")
+        install(TARGETS ${pythonWrapperModuleName} DESTINATION "lib/python/${pyModuleName}")
 
         if(args_PYMODULE_FILES)
             _install_python(

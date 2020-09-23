@@ -27,6 +27,20 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+// Modifications Copyright 2020 Autodesk, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #ifndef PXRUSDKATANA_ATTRUTILS_H
 #define PXRUSDKATANA_ATTRUTILS_H
 
@@ -59,28 +73,33 @@ struct PxrUsdKatanaUtils {
 
     /// Reverse a motion time sample. This is used for building
     /// multi-sampled attributes when motion blur is backward.
+    USDKATANA_API
     static double ReverseTimeSample(double sample);
 
     /// Convert Pixar-style numVerts to Katana-style startVerts.
+    USDKATANA_API
     static void ConvertNumVertsToStartVerts( const std::vector<int> &numVertsVec,
                                   std::vector<int> *startVertsVec );
 
+    USDKATANA_API
     static void ConvertArrayToVector(const VtVec3fArray &a, std::vector<float> *r);
 
     /// Convert a VtValue to a Katana attribute.
     /// If asShaderParam is false, convert arrays to type + array pairs
+    USDKATANA_API
     static FnKat::Attribute ConvertVtValueToKatAttr( const VtValue & val,
                                                      bool asShaderParam = true);
 
     /// Extract the targets of a relationship to a Katana attribute.
     /// If asShaderParam is false, convert arrays to type + array pairs
-    static FnKat::Attribute ConvertRelTargetsToKatAttr(
+    USDKATANA_API static FnKat::Attribute ConvertRelTargetsToKatAttr(
             const UsdRelationship &rel, 
             bool asShaderParam = true);
 
     /// Convert a VtValue to a Katana custom geometry attribute (primvar).
     /// Katana uses a different encoding here from other attributes, which
     /// requires the inputType and elementSize attributes.
+    USDKATANA_API
     static void ConvertVtValueToKatCustomGeomAttr( const VtValue & val,
                                         int elementSize,
                                         const TfToken &roleName,
@@ -89,6 +108,7 @@ struct PxrUsdKatanaUtils {
                                         FnKat::Attribute *elementSizeAttr );
 
     /// Returns whether the given attribute is varying over time.
+    USDKATANA_API
     static bool IsAttributeVarying(const UsdAttribute &attr, double currentTime);
 
     /// \brief Get the handle for the given shadingNode.
@@ -98,7 +118,7 @@ struct PxrUsdKatanaUtils {
     /// \p shadingNode until it encounters a prim that is not a Scope.  This is
     /// required to get material referencing in katana (since in katana, all nodes
     /// are in a flat namespace, whereas Usd does not make any such requirement).
-    static std::string GenerateShadingNodeHandle(
+    USDKATANA_API static std::string GenerateShadingNodeHandle(
         const UsdPrim& shadingNode);
 
     // Scan the model hierarchy for models with kind=camera.
@@ -109,12 +129,14 @@ struct PxrUsdKatanaUtils {
 
     /// Convert the given SdfPath in the UsdStage to the corresponding
     /// katana location, given a scenegraph generator configuration.
+    USDKATANA_API
     static std::string ConvertUsdPathToKatLocation(
             const SdfPath &path,
             const std::string &isolatePathString,
             const std::string &rootPathString,
             const std::string &sessionPathString = "",
             bool allowOutsideIsolation = false);
+    USDKATANA_API
     static std::string ConvertUsdPathToKatLocation(
             const SdfPath &path,
             const PxrUsdKatanaUsdInPrivateData& data,
@@ -127,10 +149,10 @@ struct PxrUsdKatanaUtils {
     /// USD Looks can have Katana child-parent relationships, which means that
     /// we'll have to do some extra processing to find the correct path that
     /// these resolve to
-    static std::string _GetDisplayGroup(
+    USDKATANA_API static std::string _GetDisplayGroup(
             const UsdPrim &prim,
             const SdfPath& path);
-    static std::string _GetDisplayName(const UsdPrim &prim);
+    USDKATANA_API static std::string _GetDisplayName(const UsdPrim &prim);
     USDKATANA_API static std::string ConvertUsdMaterialPathToKatLocation(
             const SdfPath &path,
             const PxrUsdKatanaUsdInPrivateData& data);
@@ -147,12 +169,12 @@ struct PxrUsdKatanaUtils {
 
     // this finds prims with kind=subcomponent, increasingly used in complex
     // Sets models.
-    static bool PrimIsSubcomponent(const UsdPrim &prim);
+    USDKATANA_API static bool PrimIsSubcomponent(const UsdPrim &prim);
 
     /// Indicates if a given group should have a viewer proxy based on heuristics
     /// having to do with number of children and how many are components (non-group
     /// models).
-    static bool ModelGroupNeedsProxy(const UsdPrim &prim);
+    USDKATANA_API static bool ModelGroupNeedsProxy(const UsdPrim &prim);
 
     /// Creates the 'proxies' group attribute for consumption by the viewer.
     USDKATANA_API static FnKat::GroupAttribute GetViewerProxyAttr(
@@ -170,16 +192,16 @@ struct PxrUsdKatanaUtils {
 
     /// Returns the asset name for the given prim.  It should be a model.  This
     /// will fallback to the name of the prim.
-    static std::string GetAssetName(const UsdPrim& prim);
+    USDKATANA_API static std::string GetAssetName(const UsdPrim& prim);
 
     /// Returns the model instance name of the given prim, based on its
     /// RiAttribute-encoding, and falling back to its prim name.
-    static std::string GetModelInstanceName(const UsdPrim& prim);
+    USDKATANA_API static std::string GetModelInstanceName(const UsdPrim& prim);
 
     /// Returns true if the prim is a Model and is an Assembly or Component.
     /// Currently, we're only using this for determining when to log an error
     /// when accessing model data.
-    static bool IsModelAssemblyOrComponent(const UsdPrim& prim);
+    USDKATANA_API static bool IsModelAssemblyOrComponent(const UsdPrim& prim);
 
     /// \}
 

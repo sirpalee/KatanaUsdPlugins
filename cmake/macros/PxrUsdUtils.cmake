@@ -1,6 +1,19 @@
 # from USD/cmake/macros/Public.cmake
+# Modifications Copyright 2020 Autodesk, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 function(pxr_katana_nodetypes NODE_TYPES)
-    set(installDir ${PXR_INSTALL_SUBDIR}/plugin/Plugins/NodeTypes)
+    set(installDir plugin/Plugins)
 
     set(pyFiles "")
     set(importLines "")
@@ -75,7 +88,7 @@ function(_install_python LIBRARY_NAME)
         ${ARGN}
     )
 
-    set(libPythonPrefix ${PXR_INSTALL_SUBDIR}/lib/python)
+    set(libPythonPrefix lib/python)
     if(BUILD_KATANA_INTERNAL_USD_PLUGINS)
         set(libPythonPrefix ${PLUGINS_RES_BUNDLE_PATH}/Usd/lib/python)
     endif()
@@ -86,11 +99,7 @@ function(_install_python LIBRARY_NAME)
         set(filesToInstall "")
 
         set(installDest
-            "${libPythonPrefix}/${PXR_PY_PACKAGE_NAME}/${LIBRARY_INSTALLNAME}")
-        if(BUILD_KATANA_INTERNAL_USD_PLUGINS)
-            set(installDest
-                "${libPythonPrefix}/${LIBRARY_INSTALLNAME}")
-        endif()
+            "${libPythonPrefix}/${LIBRARY_INSTALLNAME}")
 
         # Only attempt to compile .py files. Files like plugInfo.json may also
         # be in this list
@@ -280,7 +289,7 @@ endfunction() # _get_resources_dir_name
 function(_get_resources_dir pluginsPrefix pluginName output)
     _get_resources_dir_name(resourcesDir)
     set(${output}
-        ${pluginsPrefix}/${pluginName}/${resourcesDir}
+        ${pluginsPrefix}/${resourcesDir}
         PARENT_SCOPE)
 endfunction() # _get_resources_dir
 
