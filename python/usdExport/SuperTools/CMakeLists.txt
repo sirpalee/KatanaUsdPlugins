@@ -33,7 +33,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-add_subdirectory(nodetypes)
-if (${KATANA_API_VERSION} VERSION_GREATER "4.0.0")
-    add_subdirectory(usdExport)
-endif ()
+install(FILES
+        UsdMaterialBake/__init__.py
+        UsdMaterialBake/Editor.py
+        UsdMaterialBake/Node.py
+        UsdMaterialBake/VariantsWidget.py
+        DESTINATION plugin/SuperTools/UsdMaterialBake)

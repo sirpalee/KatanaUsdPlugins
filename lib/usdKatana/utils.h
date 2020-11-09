@@ -27,20 +27,6 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
-// Modifications Copyright 2020 Autodesk, Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 #ifndef PXRUSDKATANA_ATTRUTILS_H
 #define PXRUSDKATANA_ATTRUTILS_H
 
@@ -73,21 +59,17 @@ struct PxrUsdKatanaUtils {
 
     /// Reverse a motion time sample. This is used for building
     /// multi-sampled attributes when motion blur is backward.
-    USDKATANA_API
-    static double ReverseTimeSample(double sample);
+    USDKATANA_API static double ReverseTimeSample(double sample);
 
     /// Convert Pixar-style numVerts to Katana-style startVerts.
-    USDKATANA_API
-    static void ConvertNumVertsToStartVerts( const std::vector<int> &numVertsVec,
+    USDKATANA_API static void ConvertNumVertsToStartVerts( const std::vector<int> &numVertsVec,
                                   std::vector<int> *startVertsVec );
 
-    USDKATANA_API
-    static void ConvertArrayToVector(const VtVec3fArray &a, std::vector<float> *r);
+    USDKATANA_API static void ConvertArrayToVector(const VtVec3fArray &a, std::vector<float> *r);
 
     /// Convert a VtValue to a Katana attribute.
     /// If asShaderParam is false, convert arrays to type + array pairs
-    USDKATANA_API
-    static FnKat::Attribute ConvertVtValueToKatAttr( const VtValue & val,
+    USDKATANA_API static FnKat::Attribute ConvertVtValueToKatAttr( const VtValue & val,
                                                      bool asShaderParam = true);
 
     /// Extract the targets of a relationship to a Katana attribute.
@@ -99,8 +81,7 @@ struct PxrUsdKatanaUtils {
     /// Convert a VtValue to a Katana custom geometry attribute (primvar).
     /// Katana uses a different encoding here from other attributes, which
     /// requires the inputType and elementSize attributes.
-    USDKATANA_API
-    static void ConvertVtValueToKatCustomGeomAttr( const VtValue & val,
+    USDKATANA_API static void ConvertVtValueToKatCustomGeomAttr( const VtValue & val,
                                         int elementSize,
                                         const TfToken &roleName,
                                         FnKat::Attribute *valueAttr,
@@ -108,8 +89,7 @@ struct PxrUsdKatanaUtils {
                                         FnKat::Attribute *elementSizeAttr );
 
     /// Returns whether the given attribute is varying over time.
-    USDKATANA_API
-    static bool IsAttributeVarying(const UsdAttribute &attr, double currentTime);
+    USDKATANA_API static bool IsAttributeVarying(const UsdAttribute &attr, double currentTime);
 
     /// \brief Get the handle for the given shadingNode.
     ///
@@ -129,15 +109,13 @@ struct PxrUsdKatanaUtils {
 
     /// Convert the given SdfPath in the UsdStage to the corresponding
     /// katana location, given a scenegraph generator configuration.
-    USDKATANA_API
-    static std::string ConvertUsdPathToKatLocation(
+    USDKATANA_API static std::string ConvertUsdPathToKatLocation(
             const SdfPath &path,
             const std::string &isolatePathString,
             const std::string &rootPathString,
             const std::string &sessionPathString = "",
             bool allowOutsideIsolation = false);
-    USDKATANA_API
-    static std::string ConvertUsdPathToKatLocation(
+    USDKATANA_API static std::string ConvertUsdPathToKatLocation(
             const SdfPath &path,
             const PxrUsdKatanaUsdInPrivateData& data,
             bool allowOutsideIsolation = false);
@@ -149,7 +127,7 @@ struct PxrUsdKatanaUtils {
     /// USD Looks can have Katana child-parent relationships, which means that
     /// we'll have to do some extra processing to find the correct path that
     /// these resolve to
-    USDKATANA_API static std::string _GetDisplayGroup(
+   USDKATANA_API  static std::string _GetDisplayGroup(
             const UsdPrim &prim,
             const SdfPath& path);
     USDKATANA_API static std::string _GetDisplayName(const UsdPrim &prim);

@@ -12,6 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# Modifications Copyright 2020 Autodesk, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 function(pxr_katana_nodetypes NODE_TYPES)
     set(installDir plugin/Plugins)
 
@@ -48,6 +61,62 @@ function(pxr_katana_nodetypes NODE_TYPES)
         )
     endif()
 endfunction() # pxr_katana_nodetypes
+
+
+# from USD/cmake/macros/Public.cmake
+function(pxr_katana_python_plugin)
+    # Installs the PYTHON_MODULE_FILES to /lib/python
+    # Installs the PYTHON_PLUGIN_REGISTRY_FILES files to /plugin/{PLUGIN_TYPE}
+    set(options)
+    set(oneValueArgs
+        MODULE_NAME
+        PLUGIN_TYPE
+    )
+    set(multiValueArgs
+        PYTHON_PLUGIN_REGISTRY_FILES # Files used to register plugins
+        PYTHON_MODULE_FILES # Module files to be installed into lib/python
+    )
+    cmake_parse_arguments(args
+        "${options}"
+        "${oneValueArgs}"
+        "${multiValueArgs}"
+        ${ARGN}
+    )
+    set(pluginInstallDir ${PXR_INSTALL_SUBDIR}/plugin/${args_PLUGIN_TYPE})
+    set(pythonInstallDir ${PXR_INSTALL_SUBDIR}/lib/python)
+
+    install(
+        PROGRAMS ${args_PYTHON_PLUGIN_REGISTRY_FILES}
+        DESTINATION ${pluginInstallDir}
+    )
+    install(
+        PROGRAMS ${args_PYTHON_MODULE_FILES}
+        DESTINATION ${pythonInstallDir}
+    )
+
+    if(BUILD_KATANA_INTERNAL_USD_PLUGINS)
+        if(args_PYTHON_PLUGIN_REGISTRY_FILES)
+            bundle_files(
+                TARGET
+                ${args_MODULE_NAME}
+                DESTINATION_FOLDER
+                ${PLUGINS_RES_BUNDLE_PATH}/Usd/plugin/${args_PLUGIN_TYPE}
+                FILES
+                ${args_PYTHON_PLUGIN_REGISTRY_FILES}
+            )
+        endif()
+        if(args_PYTHON_MODULE_FILES)
+            bundle_files(
+                TARGET
+                ${args_MODULE_NAME}.python
+                DESTINATION_FOLDER
+                ${PLUGINS_RES_BUNDLE_PATH}/Usd/lib/python
+                FILES
+                ${args_PYTHON_MODULE_FILES}
+            )
+        endif()
+    endif()
+endfunction() # pxr_katana_lookFileBake
 
 # from USD/cmake/macros/Private.cmake
 function(_get_python_module_name LIBRARY_FILENAME MODULE_NAME)
@@ -328,3 +397,35 @@ function(_katana_build_install libTarget installPathSuffix)
         )
     endif()
 endfunction() # _katana_build_install
+
+function(pxr_katana_install_plugin_resources)
+    set(options
+    )
+    set(oneValueArgs
+        MODULE_NAME
+        PLUGIN_TYPE
+    )
+    set(multiValueArgs
+        FILES
+    )
+    cmake_parse_arguments(args
+        "${options}"
+        "${oneValueArgs}"
+        "${multiValueArgs}"
+        ${ARGN}
+    )
+
+    install(FILES ${args_FILES}
+            DESTINATION "plugin/${args_PLUGIN_TYPE}"
+    )
+    if(BUILD_KATANA_INTERNAL_USD_PLUGINS)
+        bundle_files(
+            TARGET
+            ${args_MODULE_NAME}
+            DESTINATION_FOLDER
+            ${PLUGINS_RES_BUNDLE_PATH}/Usd/plugin
+            FILES
+            ${args_FILES}
+        )
+    endif()
+endfunction() # pxr_katana_install_plugin_resources

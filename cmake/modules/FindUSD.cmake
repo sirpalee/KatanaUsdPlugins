@@ -58,6 +58,8 @@ set(USD_LIBRARIES
     usdUtils
     vt
     work
+    sdr
+    ndr
 )
 
 if(NOT DEFINED USD_LIBRARY_DIR)

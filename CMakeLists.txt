@@ -12,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 cmake_minimum_required(VERSION 3.12)
-
 project(KatanaUsdPlugins)
-
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
                       ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules
                       ${CMAKE_CURRENT_SOURCE_DIR}/cmake/macros)
