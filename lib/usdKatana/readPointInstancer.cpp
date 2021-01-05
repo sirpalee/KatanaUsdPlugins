@@ -27,6 +27,19 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+// Modifications Copyright 2020 Autodesk, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 #include "usdKatana/attrMap.h"
 #include "usdKatana/readPointInstancer.h"
 #include "usdKatana/readXformable.h"
@@ -687,34 +700,36 @@ PxrUsdKatanaReadPointInstancer(
     // Transfer primvars.
     //
 
-    FnKat::GroupBuilder instancerPrimvarsBldr;
-    FnKat::GroupBuilder instancesPrimvarsBldr;
-    for (int64_t i = 0; i < primvarAttrs.getNumberOfChildren(); ++i)
+    // KtoA translates the built-in instance array location, instead of the usd point instancer. All the primvars are
+    // moved to the instance array and scope changed if needed.
+    // USD defines 5 different scopes for primvars, faceVarying, varying and vertex, which is setting a single element
+    // from a primvar array on an instancer, and uniform and constant, which is copying the whole array to each
+    // instance.
+    // UsdIn maps the scopes the following way:
+    // USD scope -> Katana scope
+    // faceVarying -> vertex
+    // varying -> point
+    // vertex -> point
+    // uniform -> face
+    // constant -> primitive
+    // KtoA behaves the same as USD in case of point, face and primitive Katana scopes, but ignores vertex on the
+    // instancer array. This is expected, as face-varying data does not make sense on an instance array.
+    // The following code changes every vertex scope arbitrary attribute to the point scope.
+    FnKat::GroupBuilder arbitraryBuilder;
+    const auto numPrimvarAttrs = primvarAttrs.getNumberOfChildren();
+    for (auto i = decltype(numPrimvarAttrs){0}; i < numPrimvarAttrs; i += 1)
     {
-        const std::string primvarName = primvarAttrs.getChildName(i);
+        const auto primvarName = primvarAttrs.getChildName(i);
         FnKat::GroupAttribute primvarAttr = primvarAttrs.getChildByIndex(i);
+        arbitraryBuilder.set(primvarName, primvarAttr);
 
-        if (FnKat::StringAttribute(primvarAttr.getChildByName("scope")
-                ).getValue("", false) == "primitive")
-        {
-            // If this primvar is constant, leave it on the instancer.
-            //
-            instancerPrimvarsBldr.set(primvarName, primvarAttr);
-        }
-        else
-        {
-            // If this primvar is non-constant, move it down to the instances,
-            // but make it constant so that it can be sliced and used by each
-            // instance.
-            //
-            instancesPrimvarsBldr.set(primvarName, primvarAttr);
-            instancesPrimvarsBldr.set(primvarName + ".scope",
-                    FnKat::StringAttribute("primitive"));
+        FnKat::StringAttribute scopeAttr = primvarAttr.getChildByName("scope");
+        if (scopeAttr.isValid() && scopeAttr.getValue("", false) == "vertex") {
+            arbitraryBuilder.set(primvarName + ".scope", FnKat::StringAttribute("point"));
         }
     }
-    instancerAttrMap.set("geometry.arbitrary", instancerPrimvarsBldr.build());
-    instancesBldr.setAttrAtLocation("instances",
-            "geometry.arbitrary", instancesPrimvarsBldr.build());
+    instancesBldr.setAttrAtLocation("instances", "geometry.arbitrary", arbitraryBuilder.build());
+    instancerAttrMap.del("geometry.arbitrary");
 
     //
     // Set the final aggregate bounds.
