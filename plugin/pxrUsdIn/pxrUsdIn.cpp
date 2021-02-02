@@ -364,20 +364,27 @@ public:
 
             {
                 std::string opName;
-                if (PxrUsdKatanaUsdInPluginRegistry::FindUsdType(
-                        prim.GetTypeName(), &opName)) {
-                    if (!opName.empty()) {
-                        
+                const TfToken typeName = prim.GetTypeName();
+                if (PxrUsdKatanaUsdInPluginRegistry::FindUsdType(typeName,
+                                                                 &opName))
+                {
+                    if (!opName.empty())
+                    {
                         if (privateData)
                         {
-                            // roughly equivalent to execOp except that we can
-                            // locally override privateData
-                            PxrUsdKatanaUsdInPluginRegistry::ExecuteOpDirectExecFnc(
-                                    opName, *privateData, opArgs, interface);
+                            if ((typeName.GetString() != "SkelRoot") ||
+                                privateData->GetEvaluateUsdSkelBindings())
+                            {
+                                // roughly equivalent to execOp except that we
+                                // can locally override privateData
+                                PxrUsdKatanaUsdInPluginRegistry::
+                                    ExecuteOpDirectExecFnc(opName, *privateData,
+                                                           opArgs, interface);
 
-                            opArgs = privateData->updateExtensionOpArgs(opArgs);
+                                opArgs =
+                                    privateData->updateExtensionOpArgs(opArgs);
+                            }
                         }
-                        
                     }
                 }
             }
@@ -748,7 +755,7 @@ public:
             const std::string & rootLocationPath)
     {
         ArgsBuilder ab;
-        
+
         FnKat::StringAttribute usdFileAttr = opArgs.getChildByName("fileName");
         if (!usdFileAttr.isValid()) {
             return ab.buildWithError("UsdIn: USD fileName not specified.");
@@ -824,15 +831,12 @@ public:
         ab.verbose = FnKat::IntAttribute(
                 opArgs.getChildByName("verbose")).getValue(0, false);
 
-        ab.outputTargets;
-
         typedef FnAttribute::StringAttribute::array_type StringArrayType;
         FnAttribute::StringAttribute outputTargetArgStr = FnAttribute::StringAttribute(opArgs.getChildByName(
             "outputTargets"));
         if (outputTargetArgStr.isValid())
         {
             StringArrayType outputTargetVector = outputTargetArgStr.getNearestSample(0);
-            int i = 0;
             for(StringArrayType::const_iterator it = outputTargetVector.begin() ; 
                 it != outputTargetVector.end() ; 
                 ++it)
@@ -976,7 +980,12 @@ public:
             userPropertiesNames.clear();
             userPropertiesNames.push_back("userProperties");
         }
-        
+
+        ab.evaluateUsdSkelBindings = static_cast<bool>(
+            FnKat::IntAttribute(
+                opArgs.getChildByName("evaluateUsdSkelBindings"))
+                .getValue(1, false));
+
         return ab.build();
     }
 

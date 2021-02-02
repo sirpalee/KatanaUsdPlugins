@@ -41,9 +41,11 @@ set(USD_LIBRARIES
     gf
     kind
     hio
+    ndr
     pcp
     plug
     sdf
+    sdr
     tf
     trace
     usd
@@ -58,8 +60,6 @@ set(USD_LIBRARIES
     usdUtils
     vt
     work
-    sdr
-    ndr
 )
 
 if(NOT DEFINED USD_LIBRARY_DIR)

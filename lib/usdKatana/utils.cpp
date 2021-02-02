@@ -34,6 +34,7 @@
 #include "pxr/base/gf/vec3d.h"
 #include "pxr/base/gf/matrix4d.h"
 #include "pxr/base/arch/demangle.h"
+#include "pxr/base/work/loops.h"
 #include "pxr/usd/kind/registry.h"
 #include "pxr/base/vt/array.h"
 #include "pxr/base/vt/value.h"
@@ -53,6 +54,11 @@
 #include "pxr/usd/usdLux/listAPI.h"
 #include "pxr/usd/usdShade/shader.h"
 #include "pxr/usd/usdShade/material.h"
+#include "pxr/usd/usdSkel/bindingAPI.h"
+#include "pxr/usd/usdSkel/blendShapeQuery.h"
+#include "pxr/usd/usdSkel/root.h"
+#include "pxr/usd/usdSkel/skeletonQuery.h"
+#include "pxr/usd/usdSkel/skinningQuery.h"
 #include "pxr/usd/usdUtils/pipeline.h"
 
 #include "vtKatana/array.h"
@@ -67,10 +73,89 @@
 
 FnLogSetup("PxrUsdKatanaUtils");
 
-#include <sstream>
 #include <cmath>
+#include <sstream>
 
 PXR_NAMESPACE_OPEN_SCOPE
+namespace
+{
+void ApplyBlendShapeAnimation(const UsdSkelSkinningQuery& skinningQuery,
+                              const UsdSkelSkeletonQuery& skelQuery,
+                              const double time,
+                              VtVec3fArray& points)
+{
+    const UsdSkelBlendShapeQuery blendShapeQuery =
+        UsdSkelBindingAPI(skinningQuery.GetPrim());
+    if (!blendShapeQuery.IsValid())
+    {
+        return;
+    }
+
+    if (const UsdSkelAnimMapperRefPtr blendShapeMapper =
+            skinningQuery.GetBlendShapeMapper())
+    {
+        VtFloatArray blendShapeWeights;
+        const auto animQuery = skelQuery.GetAnimQuery();
+        if (!animQuery.IsValid())
+        {
+            return;
+        }
+        animQuery.ComputeBlendShapeWeights(&blendShapeWeights, time);
+
+        VtFloatArray weightsForPrim;
+        if (blendShapeMapper->Remap(blendShapeWeights, &weightsForPrim))
+        {
+            VtFloatArray subShapeWeights;
+            VtUIntArray blendShapeIndices, subShapeIndices;
+            if (blendShapeQuery.ComputeSubShapeWeights(
+                    weightsForPrim, &subShapeWeights, &blendShapeIndices,
+                    &subShapeIndices))
+            {
+                const std::vector<VtIntArray> blendShapePointIndices =
+                    blendShapeQuery.ComputeBlendShapePointIndices();
+                const std::vector<VtVec3fArray> subShapePointOffsets =
+                    blendShapeQuery.ComputeSubShapePointOffsets();
+
+                blendShapeQuery.ComputeDeformedPoints(
+                    subShapeWeights, blendShapeIndices, subShapeIndices,
+                    blendShapePointIndices, subShapePointOffsets, points);
+            }
+        }
+    }
+};
+
+void ApplyJointAnimation(const UsdSkelSkinningQuery& skinningQuery,
+                         const UsdSkelSkeletonQuery& skelQuery,
+                         const double time,
+                         VtVec3fArray& points)
+{
+    // Get the skinning transform from the skeleton.
+    VtMatrix4dArray skinningXforms;
+    skelQuery.ComputeSkinningTransforms(&skinningXforms, time);
+    // Get the prim's points first and then skin them.
+    skinningQuery.ComputeSkinnedPoints(skinningXforms, &points, time);
+
+    // Apply transforms to get the points in mesh prim space
+    // instead of skeleton space.
+    UsdGeomXformCache xformCache(time);
+    const UsdPrim& skelPrim = skelQuery.GetPrim();
+    const GfMatrix4d skelLocalToWorld =
+        xformCache.GetLocalToWorldTransform(skelPrim);
+    const GfMatrix4d primWorldToLocal =
+        xformCache.GetLocalToWorldTransform(skinningQuery.GetPrim())
+            .GetInverse();
+    const GfMatrix4d skelToPrimLocal = skelLocalToWorld * primWorldToLocal;
+    WorkParallelForN(
+        points.size(),
+        [&](size_t start, size_t end) {
+            for (size_t i = start; i < end; ++i)
+            {
+                points[i] = skelToPrimLocal.Transform(points[i]);
+            }
+        },
+        /*grainSize*/ 1000);
+};
+}  // namespace
 
 static const std::string&
 _ResolveAssetPath(const SdfAssetPath& assetPath)
@@ -797,6 +882,12 @@ PxrUsdKatanaUtils::ConvertVtValueToKatCustomGeomAttr(
         if (elementSize > 1) {
             *elementSizeAttr = FnKat::IntAttribute(elementSize);
         }
+        return;
+    }
+    if (val.IsHolding<TfToken>())
+    {
+        *valueAttr = FnKat::StringAttribute(val.Get<TfToken>().GetString());
+        *inputTypeAttr = FnKat::StringAttribute("string");
         return;
     }
 
@@ -1594,6 +1685,56 @@ PxrUsdKatanaUtils::BuildInstanceMasterMapping(
     
     
     return gb.build();
+}
+
+FnKat::Attribute PxrUsdKatanaUtils::ApplySkinningToPoints(
+    const UsdGeomPointBased& points,
+    const double time)
+{
+    FnKat::FloatAttribute skinnedPointsAttr;
+
+    UsdSkelCache skelCache;
+    const UsdPrim prim{points.GetPrim()};
+    UsdSkelRoot skelRoot = UsdSkelRoot::Find(prim);
+    if (!skelRoot)
+    {
+        return skinnedPointsAttr;
+    }
+    skelCache.Populate(skelRoot);
+
+    // Populate skinnedPoints with the points of the rest position
+    VtVec3fArray skinnedPoints;
+    points.GetPointsAttr().Get(&skinnedPoints, time);
+
+    // Get skinning query
+    const UsdSkelSkinningQuery skinningQuery = skelCache.GetSkinningQuery(prim);
+    if (!skinningQuery)
+    {
+        return skinnedPointsAttr;
+    }
+
+    // Get skeleton query
+    const UsdSkelSkeleton skel = UsdSkelBindingAPI(prim).GetInheritedSkeleton();
+    const UsdSkelSkeletonQuery skelQuery = skelCache.GetSkelQuery(skel);
+    if (!skelQuery)
+    {
+        return skinnedPointsAttr;
+    }
+
+    PXR_INTERNAL_NS::ApplyBlendShapeAnimation(skinningQuery, skelQuery, time,
+                                              skinnedPoints);
+    PXR_INTERNAL_NS::ApplyJointAnimation(skinningQuery, skelQuery, time,
+                                         skinnedPoints);
+
+    // Package the points in an attribute.
+    if (!skinnedPoints.empty())
+    {
+        std::vector<float> attrVec(skinnedPoints.size() * 3);
+        PxrUsdKatanaUtils::ConvertArrayToVector(skinnedPoints, &attrVec);
+        skinnedPointsAttr = {attrVec.data(),
+                             static_cast<int64_t>(attrVec.size()), 3};
+    }
+    return skinnedPointsAttr;
 }
 
 namespace {
